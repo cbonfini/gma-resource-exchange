@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faculty Resource Exchange — Global Migration 101</title>
+<meta name="description" content="Share and discover openly licensed teaching resources for the Global Migration 101 course.">
+<link rel="stylesheet" href="assets/exchange.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="site">
+  <div class="wrap">
+    <img src="assets/RMCH_Primary_Horizontal_Color_web.png" alt="Refugees and Migrants in Our Common Home">
+    <div class="name">Faculty Resource Exchange
+      <span>Global Migration 101 · crowd-sourced teaching resources</span>
+    </div>
+    <nav class="top" aria-label="Site">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="browse.html">Browse resources</a>
+      <a href="https://cbonfini.github.io/global-migration-101/" rel="noopener">Course site</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Teach migration better, together.</h1>
+    <p class="lede">The Resource Exchange is where faculty teaching with <em>Global Migration 101</em>
+    share readings, videos, case studies, activities, and assignments that work in their classrooms —
+    openly licensed, reviewed by our editorial team, and organized by module.</p>
+    <div class="btnrow">
+      <a class="btn" id="submit-btn" href="#how">Submit a resource</a>
+      <a class="btn ghost" href="browse.html">Browse shared resources</a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+  <div class="wrap">
+    <h2 id="how">How it works</h2>
+    <ol class="steps">
+      <li><span class="n" aria-hidden="true">1</span>
+        <h3>Sign in &amp; tell us about you</h3>
+        <p>The submission form requires a Google sign-in, and asks who you are, your institution,
+        and where you're based — so we can credit you properly.</p></li>
+      <li><span class="n" aria-hidden="true">2</span>
+        <h3>Describe your resource</h3>
+        <p>Pick the module it fits, the type of resource, add a link or upload a file, and tell us
+        how you currently use it in your teaching.</p></li>
+      <li><span class="n" aria-hidden="true">3</span>
+        <h3>Confirm it's free to share</h3>
+        <p>You confirm the resource contains nothing copyrighted and may be shared under a
+        Creative Commons license (CC BY-NC 4.0).</p></li>
+      <li><span class="n" aria-hidden="true">4</span>
+        <h3>Editorial review &amp; publication</h3>
+        <p>Our team reviews each submission, adds a short annotation, and publishes accepted
+        resources to the module collections on this site.</p></li>
+    </ol>
+
+    <div class="notice">
+      <h2>Open licensing, in plain words</h2>
+      <p>Everything published here is shared under
+      <a href="https://creativecommons.org/licenses/by-nc/4.0/" rel="noopener">Creative Commons BY-NC 4.0</a>:
+      anyone may use and adapt it for non-commercial teaching, with attribution to the contributor.
+      Please only submit material you created yourself or that is already openly licensed —
+      not publisher PDFs, paywalled articles, or copied textbook content. Linking to publicly
+      available material (a news article, a YouTube video) is always fine.</p>
+    </div>
+
+    <h2>What makes a great submission</h2>
+    <ol class="steps">
+      <li><span class="n" aria-hidden="true">✓</span><h3>Classroom-tested</h3>
+        <p>You've used it with students and it worked — tell us what happened.</p></li>
+      <li><span class="n" aria-hidden="true">✓</span><h3>Clearly scoped</h3>
+        <p>It fits one module (or names the modules it spans) and a clear type:
+        reading, video, case study, activity, assignment, or dataset.</p></li>
+      <li><span class="n" aria-hidden="true">✓</span><h3>Ready to reuse</h3>
+        <p>Another instructor could pick it up and run it next week without asking you questions.</p></li>
+    </ol>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    Refugees &amp; Migrants in Our Common Home — Villanova University · Mother Cabrini Institute on Immigration.
+    Questions? Contact the course team via the <a href="https://cbonfini.github.io/global-migration-101/" rel="noopener">course site</a>.
+  </div>
+</footer>
+
+<script src="assets/config.js"></script>
+<script>
+(function(){
+  var c = window.EXCHANGE_CONFIG || {};
+  var btn = document.getElementById("submit-btn");
+  if (c.FORM_URL) { btn.href = c.FORM_URL; btn.rel = "noopener"; }
+  else {
+    btn.addEventListener("click", function(e){
+      e.preventDefault();
+      alert("The submission form isn't connected yet. Site owner: paste your Google Form link into assets/config.js.");
+    });
+  }
+})();
+</script>
+</body>
+</html>

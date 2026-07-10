@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browse resources — Faculty Resource Exchange</title>
+<meta name="description" content="Browse faculty-shared, openly licensed teaching resources for Global Migration 101, organized by module and type.">
+<link rel="stylesheet" href="assets/exchange.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="site">
+  <div class="wrap">
+    <img src="assets/RMCH_Primary_Horizontal_Color_web.png" alt="Refugees and Migrants in Our Common Home">
+    <div class="name">Faculty Resource Exchange
+      <span>Global Migration 101 · crowd-sourced teaching resources</span>
+    </div>
+    <nav class="top" aria-label="Site">
+      <a href="index.html">Home</a>
+      <a href="browse.html" aria-current="page">Browse resources</a>
+      <a href="https://cbonfini.github.io/global-migration-101/" rel="noopener">Course site</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <h2 style="margin-top:6px">Shared resources</h2>
+    <div class="filters" role="search">
+      <div>
+        <label for="f-module">Module</label>
+        <select id="f-module"><option value="">All modules</option></select>
+      </div>
+      <div>
+        <label for="f-type">Type</label>
+        <select id="f-type"><option value="">All types</option></select>
+      </div>
+      <div>
+        <label for="f-q">Search</label>
+        <input id="f-q" type="search" placeholder="Title, description, contributor…">
+      </div>
+    </div>
+    <p class="count" id="count" role="status" aria-live="polite"></p>
+    <div id="groups"></div>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    All resources are shared under
+    <a href="https://creativecommons.org/licenses/by-nc/4.0/" rel="noopener">CC BY-NC 4.0</a>
+    with attribution to the contributor. Refugees &amp; Migrants in Our Common Home — Villanova University.
+  </div>
+</footer>
+
+<script src="assets/config.js"></script>
+<script>
+(function(){
+  "use strict";
+  // Course order, with each module's arc (shown as a small chip on the heading)
+  var MODULES = [
+    {t:"Foundations of Global Migration", a:"Foundations"},
+    {t:"Migration Data and Global Trends", a:"Foundations"},
+    {t:"Religion, Ethics, and Migration", a:"Narratives & Ethics"},
+    {t:"Drivers of Migration", a:"Foundations"},
+    {t:"Climate Change and Migration", a:"Future Challenges & Solutions"},
+    {t:"Refugees, Asylum, and Forced Displacement", a:"Historical & Structural Context"},
+    {t:"Migration Through History", a:"Historical & Structural Context"},
+    {t:"Migration Journey and Experience", a:"Historical & Structural Context"},
+    {t:"Borders, Sovereignty, and Policy", a:"Systems & Governance"},
+    {t:"Migration, Labor, and the Economy", a:"Systems & Governance"},
+    {t:"Migrant Lives and Identities", a:"Human Experience"},
+    {t:"Media, Narratives, and Representation", a:"Narratives & Ethics"},
+    {t:"Cities, Communities, and Integration", a:"Human Experience"},
+    {t:"Solutions, Governance, and the Future", a:"Future Challenges & Solutions"},
+    {t:"General / multiple modules", a:""}
+  ];
+  var ARC = {};
+  MODULES.forEach(function(m){ ARC[m.t] = m.a; });
+
+  var groupsEl = document.getElementById("groups"), empty = document.getElementById("empty"),
+      count = document.getElementById("count"),
+      fMod = document.getElementById("f-module"), fType = document.getElementById("f-type"),
+      fQ = document.getElementById("f-q");
+  MODULES.forEach(function(m){ fMod.add(new Option(m.t, m.t)); });
+
+  function esc(s){ var d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; }
+
+  // Minimal RFC-4180 CSV parser (handles quoted fields, commas, newlines)
+  function parseCSV(text){
+    var rows = [], row = [], cur = "", q = false;
+    for (var i = 0; i < text.length; i++){
+      var ch = text[i];
+      if (q){
+        if (ch === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+        else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ","){ row.push(cur); cur = ""; }
+      else if (ch === "\n" || ch === "\r"){
+        if (ch === "\r" && text[i+1] === "\n") i++;
+        row.push(cur); cur = "";
+        if (row.length > 1 || row[0] !== "") rows.push(row);
+        row = [];
+      } else cur += ch;
+    }
+    if (cur !== "" || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  // Map header names to fields, tolerant of wording/order changes in the Sheet
+  function headerMap(hdr){
+    var map = {};
+    hdr.forEach(function(h, i){
+      var k = h.toLowerCase();
+      if (/name/.test(k) && map.name === undefined && !/institution|module/.test(k)) map.name = i;
+      else if (/institution|university|organi[sz]ation|affiliation/.test(k)) map.inst = i;
+      else if (/country|where.*(from|based)|location/.test(k)) map.country = i;
+      else if (/module/.test(k)) map.module = i;
+      else if (/type|category/.test(k)) map.type = i;
+      else if (/title/.test(k)) map.title = i;
+      else if (/description|about the resource/.test(k)) map.desc = i;
+      else if (/link|url/.test(k) && map.link === undefined) map.link = i;
+      else if (/upload|file/.test(k) && map.file === undefined) map.file = i;
+      else if (/how.*(use|teach)|teaching/.test(k)) map.use = i;
+      else if (/annotation|editor/.test(k)) map.ann = i;
+      else if (/timestamp|date/.test(k) && map.date === undefined) map.date = i;
+    });
+    return map;
+  }
+
+  var DATA = [];
+  function render(){
+    var m = fMod.value, t = fType.value, q = fQ.value.trim().toLowerCase();
+    var shown = DATA.filter(function(r){
+      if (m && r.module !== m) return false;
+      if (t && r.type !== t) return false;
+      if (q){
+        var hay = (r.title + " " + r.desc + " " + r.name + " " + r.inst + " " + r.use + " " + r.ann).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    function card(r){
+      var title = r.link ? '<a href="' + esc(r.link) + '" rel="noopener">' + esc(r.title) + "</a>" : esc(r.title);
+      return '<li class="res">' +
+        (r.type ? '<div class="meta"><span class="chip type">' + esc(r.type) + "</span></div>" : "") +
+        "<h4>" + title + "</h4>" +
+        (r.desc ? "<p>" + esc(r.desc) + "</p>" : "") +
+        '<p class="who">Shared by ' + esc(r.name || "a colleague") +
+          (r.inst ? " · " + esc(r.inst) : "") + (r.country ? " · " + esc(r.country) : "") + "</p>" +
+        (r.use ? '<div class="use"><b>How it’s used in teaching:</b> ' + esc(r.use) + "</div>" : "") +
+        (r.ann ? '<div class="ann"><b>Editor’s note:</b> ' + esc(r.ann) + "</div>" : "") +
+      "</li>";
+    }
+    // Group under module headings, in course order
+    var byMod = {};
+    shown.forEach(function(r){
+      var key = r.module || "General / multiple modules";
+      (byMod[key] = byMod[key] || []).push(r);
+    });
+    var order = MODULES.map(function(x){ return x.t; });
+    Object.keys(byMod).forEach(function(k){ if (order.indexOf(k) === -1) order.push(k); });
+    groupsEl.innerHTML = order.filter(function(k){ return byMod[k]; }).map(function(k){
+      var rs = byMod[k], arc = ARC[k];
+      return '<section class="modgroup">' +
+        "<h3>" + (arc ? '<span class="arc">' + esc(arc) + "</span>" : "") + esc(k) +
+        '<span class="gcount">' + rs.length + " resource" + (rs.length === 1 ? "" : "s") + "</span></h3>" +
+        '<ul class="grid">' + rs.map(card).join("") + "</ul>" +
+      "</section>";
+    }).join("");
+    empty.hidden = shown.length > 0;
+    if (!shown.length){ empty.textContent = "No resources match these filters yet. Try clearing a filter — or be the first to share one!"; }
+    count.textContent = shown.length + " resource" + (shown.length === 1 ? "" : "s") +
+      (DATA.length !== shown.length ? " (of " + DATA.length + ")" : "");
+  }
+
+  function load(){
+    var c = window.EXCHANGE_CONFIG || {};
+    if (!c.CSV_URL){
+      empty.hidden = false;
+      empty.innerHTML = "The resource library isn’t connected yet.<br>Site owner: publish the Approved tab of the response Sheet to the web as CSV and paste the link into <code>assets/config.js</code>.";
+      count.textContent = "";
+      return;
+    }
+    fetch(c.CSV_URL, { cache: "no-store" }).then(function(r){
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).then(function(text){
+      var rows = parseCSV(text);
+      if (rows.length < 2){ DATA = []; render(); return; }
+      var map = headerMap(rows[0]);
+      DATA = rows.slice(1).map(function(r){
+        function g(i){ return i === undefined ? "" : (r[i] || "").trim(); }
+        return { name:g(map.name), inst:g(map.inst), country:g(map.country),
+                 module:g(map.module), type:g(map.type), title:g(map.title),
+                 desc:g(map.desc), link:g(map.link) || g(map.file), use:g(map.use), ann:g(map.ann) };
+      }).filter(function(r){ return r.title; }).reverse(); // newest first
+      var types = {};
+      DATA.forEach(function(r){ if (r.type) types[r.type] = 1; });
+      Object.keys(types).sort().forEach(function(t){ fType.add(new Option(t, t)); });
+      render();
+    }).catch(function(){
+      empty.hidden = false;
+      empty.textContent = "We couldn\u2019t load the resource library right now. Please refresh, or try again in a few minutes.";
+      count.textContent = "";
+    });
+  }
+  [fMod, fType].forEach(function(el){ el.addEventListener("change", render); });
+  fQ.addEventListener("input", render);
+  load();
+})();
+</script>
+</body>
+</html>
